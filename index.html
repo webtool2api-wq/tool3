@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Proforma Invoice Generator - Fluid Power Hydraulics</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @media print {
+      @page { 
+        size: A4 portrait; 
+        margin: 0; 
+      }
+      body { 
+        background: #fff !important; 
+        color: #000 !important; 
+        margin: 0 !important; 
+        padding: 0 !important; 
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      .no-print { 
+        display: none !important; 
+      }
+      .print-area { 
+        width: 100% !important; 
+        margin: 0 !important; 
+        padding: 10mm 12mm 15mm 12mm !important; 
+        box-shadow: none !important; 
+        border: none !important; 
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 font-sans min-h-screen pb-12">
+
+  <!-- HEADER / ACTION CONTROLS -->
+  <header class="no-print bg-slate-900 text-white shadow-md mb-6 border-b border-slate-700">
+    <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap justify-between items-center gap-4">
+      <div class="flex items-center space-x-3">
+        <i class="fa-solid fa-file-invoice-dollar text-2xl text-blue-400"></i>
+        <div>
+          <h1 class="text-xl font-bold">Proforma Invoice Generator</h1>
+          <p class="text-xs text-slate-400">Fluid Power Hydraulics • GST & Billing Tool</p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-3">
+        <label class="flex items-center space-x-2 bg-slate-800 px-3 py-2 rounded-md border border-slate-700 cursor-pointer text-sm hover:bg-slate-750 transition">
+          <input type="checkbox" id="chkAutoSave" onchange="toggleAutoSave()" class="rounded text-blue-600 w-4 h-4">
+          <span class="text-slate-200">Save Draft</span>
+          <span id="draftBadge" class="hidden text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-1.5 py-0.5 rounded">Saved</span>
+        </label>
+
+        <button onclick="loadSampleData()" class="bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm px-3 py-2 rounded-md border border-slate-700 transition">
+          <i class="fa-solid fa-folder-open text-amber-400 me-1"></i> Load Sample
+        </button>
+
+        <button onclick="clearAllData()" class="bg-slate-800 hover:bg-red-900/40 text-red-300 text-sm px-3 py-2 rounded-md border border-slate-700 transition">
+          <i class="fa-solid fa-rotate-left me-1"></i> Clear Blank
+        </button>
+
+        <button onclick="exportToWord()" class="bg-blue-700 hover:bg-blue-600 text-white font-medium text-sm px-4 py-2 rounded-md shadow transition">
+          <i class="fa-solid fa-file-word me-1"></i> Export Word
+        </button>
+
+        <button onclick="window.print()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-sm px-4 py-2 rounded-md shadow transition">
+          <i class="fa-solid fa-print me-1"></i> Print / PDF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- FORM AND LIVE PREVIEW CONTAINER -->
+  <main class="max-w-7xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-12 gap-8">
+
+    <!-- LEFT: FORM CONTROLS -->
+    <section class="no-print lg:col-span-5 bg-white p-5 rounded-xl shadow-sm border border-slate-200 space-y-5">
+      <div>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1 mb-2">Parties Information</h2>
+        <div class="space-y-2 text-xs">
+          <div>
+            <label class="block font-medium mb-0.5">Company / Seller Name</label>
+            <input type="text" id="sellerName" oninput="updateInvoice()" placeholder="Fluid Power Hydraulics" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-medium mb-0.5">Buyer Details</label>
+            <textarea id="buyerInfo" oninput="updateInvoice()" rows="4" placeholder="M/s ARKKAYS BRIGHT STEEL PVT.LTD.&#10;Factory: B-73, Sipcot Industrial Park,&#10;Irungattukottai, Sriperumpudur,&#10;Kancheepuram - 602117" class="w-full border rounded px-2 py-1 font-mono text-xs focus:ring-1 focus:ring-blue-500 outline-none"></textarea>
+          </div>
+          <div>
+            <label class="block font-medium mb-0.5">Buyer GSTIN</label>
+            <input type="text" id="buyerGST" oninput="updateInvoice()" placeholder="33ABECA6961A1Z1" class="w-full border rounded px-2 py-1 font-mono uppercase focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1 mb-2">Invoice Meta</h2>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="block font-medium mb-0.5">Proforma Inv No.</label>
+            <input type="text" id="pivNo" oninput="updateInvoice()" placeholder="FPH-PIV-070-2026" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-medium mb-0.5">Dated</label>
+            <input type="text" id="pivDate" oninput="updateInvoice()" placeholder="23-09-2026" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-medium mb-0.5">Buyer's Order No.</label>
+            <input type="text" id="orderNo" oninput="updateInvoice()" placeholder="5510000151" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+          <div>
+            <label class="block font-medium mb-0.5">Dated</label>
+            <input type="text" id="orderDate" oninput="updateInvoice()" placeholder="09-05-2026" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="flex justify-between items-center border-b pb-1 mb-2">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500">Line Items</h2>
+          <button onclick="addLineItem()" class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-600 font-semibold px-2 py-0.5 rounded border border-blue-200 transition">+ Add Item</button>
+        </div>
+        <div id="itemsContainer" class="space-y-3"></div>
+      </div>
+
+      <div>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1 mb-2">Tax & Payment Details</h2>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div>
+            <label class="block font-medium mb-0.5">Tax Type</label>
+            <select id="taxType" onchange="updateInvoice()" class="w-full border rounded px-2 py-1 bg-white focus:ring-1 focus:ring-blue-500 outline-none">
+              <option value="INTRA">CGST + SGST (9% + 9%)</option>
+              <option value="INTER">IGST (18%)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-medium mb-0.5">GST Rate (%)</label>
+            <input type="number" id="gstRate" value="18" oninput="updateInvoice()" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+          <div class="col-span-2">
+            <label class="block font-medium mb-0.5">Freight Charges (₹)</label>
+            <input type="number" id="freightCharges" value="0" oninput="updateInvoice()" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          </div>
+
+          <!-- Round Off Toggle Checkbox -->
+          <div class="col-span-2 border-t pt-2 mt-1">
+            <label class="flex items-center space-x-2 cursor-pointer font-medium text-slate-700">
+              <input type="checkbox" id="chkRoundOff" onchange="updateInvoice()" checked class="rounded text-blue-600 w-4 h-4">
+              <span>Enable Round Off</span>
+            </label>
+          </div>
+
+          <!-- Received Payment Toggle & Input -->
+          <div class="col-span-2 border-t pt-2 mt-1">
+            <label class="flex items-center space-x-2 cursor-pointer font-medium text-slate-700 mb-1">
+              <input type="checkbox" id="chkEnableReceived" onchange="toggleReceivedField()" class="rounded text-blue-600 w-4 h-4">
+              <span>Add Received / Advance Payment</span>
+            </label>
+            <div id="receivedContainer" class="hidden mt-1">
+              <input type="number" id="receivedPayment" value="0" oninput="updateInvoice()" placeholder="Enter amount received (₹)" class="w-full border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-500 border-b pb-1 mb-2">Bank Details</h2>
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <input type="text" id="bankName" oninput="updateInvoice()" placeholder="HDFC BANK LTD" class="border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          <input type="text" id="bankBranch" oninput="updateInvoice()" placeholder="VADAPALANI" class="border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          <input type="text" id="bankAcc" oninput="updateInvoice()" placeholder="07952320000398" class="border rounded px-2 py-1 focus:ring-1 focus:ring-blue-500 outline-none">
+          <input type="text" id="bankIFSC" oninput="updateInvoice()" placeholder="HDFC0001297" class="border rounded px-2 py-1 font-mono focus:ring-1 focus:ring-blue-500 outline-none">
+        </div>
+      </div>
+    </section>
+
+    <!-- RIGHT: LIVE INVOICE PREVIEW -->
+    <section class="lg:col-span-7">
+      <div class="print-area bg-white text-black p-6 shadow-md rounded-xl border border-slate-200 text-xs">
+        
+        <!-- Header Sticker / Company Banner (Exact from 41474.jpg) -->
+        <div class="w-full mb-3" id="headerBannerContainer">
+          <img id="imgHeaderSticker" src="data:image/png;base64,<!-- STICKER_BASE64 -->" alt="Fluid Power Hydraulics Banner" class="w-full object-contain block">
+        </div>
+
+        <!-- Header Info Grid -->
+        <table class="w-full border-collapse border border-black mb-0">
+          <tr>
+            <td class="w-1/2 p-2 border-r border-b border-black align-top">
+              <span class="font-bold text-black block mb-1">Buyer:</span>
+              <div id="viewBuyerName" class="font-bold text-sm"></div>
+              <div id="viewBuyerAddress" class="whitespace-pre-line text-slate-800"></div>
+              <div id="viewBuyerGST" class="font-bold mt-2"></div>
+            </td>
+            <td class="w-1/2 p-0 border-b border-black align-top">
+              <table class="w-full border-collapse">
+                <tr><td class="p-1.5 border-b border-black font-semibold bg-slate-50">Proforma Invoice No.</td><td class="p-1.5 border-b border-black font-bold text-right" id="viewPivNo"></td></tr>
+                <tr><td class="p-1.5 border-b border-black font-semibold bg-slate-50">Dated</td><td class="p-1.5 border-b border-black text-right" id="viewPivDate"></td></tr>
+                <tr><td class="p-1.5 border-b border-black font-semibold bg-slate-50">Buyer's Order No.</td><td class="p-1.5 border-b border-black font-semibold text-right" id="viewOrderNo"></td></tr>
+                <tr><td class="p-1.5 font-semibold bg-slate-50">Dated</td><td class="p-1.5 text-right" id="viewOrderDate"></td></tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+
+        <!-- Line Items Table -->
+        <table class="w-full border-collapse border-x border-b border-black text-center mb-0">
+          <thead>
+            <tr class="bg-slate-100 border-b border-black font-bold">
+              <th class="p-1.5 border-r border-black w-8">Sl.</th>
+              <th class="p-1.5 border-r border-black text-left">Description of Goods</th>
+              <th class="p-1.5 border-r border-black w-16">HSN/SAC</th>
+              <th class="p-1.5 border-r border-black w-12">GST</th>
+              <th class="p-1.5 border-r border-black w-10">Qty</th>
+              <th class="p-1.5 border-r border-black w-20">Rate</th>
+              <th class="p-1.5 border-r border-black w-16">Discount</th>
+              <th class="p-1.5 w-24 text-right pr-2">Amount</th>
+            </tr>
+          </thead>
+          <tbody id="viewItemsBody"></tbody>
+        </table>
+
+        <!-- Summary & Totals -->
+        <table class="w-full border-collapse border-x border-b border-black text-right mb-0">
+          <tr id="viewFreightRow"><td class="p-1.5 border-r border-black text-left">FREIGHT CHARGES</td><td class="p-1.5 w-28" id="viewFreightVal">0.00</td></tr>
+          <tr class="border-t border-black font-bold"><td class="p-1.5 border-r border-black">TAXABLE VALUE =</td><td class="p-1.5 w-28" id="viewTaxableVal">0.00</td></tr>
+          <tr id="rowCGST"><td class="p-1.5 border-r border-black text-left">CGST OUTPUT (<span id="viewCGSTRate">9</span>%)</td><td class="p-1.5 w-28" id="viewCGSTVal">0.00</td></tr>
+          <tr id="rowSGST"><td class="p-1.5 border-r border-black text-left">SGST OUTPUT (<span id="viewSGSTRate">9</span>%)</td><td class="p-1.5 w-28" id="viewSGSTVal">0.00</td></tr>
+          <tr id="rowIGST" class="hidden"><td class="p-1.5 border-r border-black text-left">IGST OUTPUT (<span id="viewIGSTRate">18</span>%)</td><td class="p-1.5 w-28" id="viewIGSTVal">0.00</td></tr>
+          <tr id="rowRoundOff"><td class="p-1.5 border-r border-black text-left">ROUNDED OFF</td><td class="p-1.5 w-28" id="viewRoundOffVal">0.00</td></tr>
+          <tr class="border-t border-black font-bold bg-slate-100"><td class="p-1.5 border-r border-black">GRAND TOTAL =</td><td class="p-1.5 w-28" id="viewGrandTotalVal">0.00</td></tr>
+          
+          <!-- Received & Balance Payment Rows (shown only if enabled) -->
+          <tr id="rowReceived" class="hidden"><td class="p-1.5 border-r border-black">RECEIVED PAYMENT</td><td class="p-1.5 w-28" id="viewReceivedVal">0.00</td></tr>
+          <tr id="rowBalance" class="hidden border-t border-black font-bold bg-slate-200"><td class="p-1.5 border-r border-black">BALANCE PAYMENT</td><td class="p-1.5 w-28" id="viewBalanceVal">0.00</td></tr>
+        </table>
+
+        <!-- Amount in Words -->
+        <div class="border-x border-b border-black p-2 font-semibold">
+          Payable Amount in Rupees : <span id="viewAmountInWords">Zero Only</span>
+        </div>
+
+        <div class="border-x border-b border-black p-2 italic">
+          Please send us the payment RTGS to enable us to despatch the materials.
+        </div>
+
+        <!-- Bank Details & Signature -->
+        <div class="border-x border-b border-black grid grid-cols-2">
+          <div class="p-2 border-r border-black">
+            <div class="font-bold underline mb-1">OUR BANKER DETAILS</div>
+            <div>Bank Name: <span id="viewBankName"></span></div>
+            <div>Branch: <span id="viewBankBranch"></span></div>
+            <div>A/c No: <span id="viewBankAcc"></span></div>
+            <div>IFSC Code: <span id="viewBankIFSC" class="font-mono"></span></div>
+          </div>
+          <div class="p-2 flex flex-col justify-between text-right">
+            <div class="font-bold text-red-700">For <span id="viewSellerSignature">Fluid Power Hydraulics</span></div>
+            <div class="font-bold mt-8">Authorised Signatory</div>
+          </div>
+        </div>
+
+        <!-- Computer Generated Footer Notice -->
+        <div class="text-center text-[11px] text-slate-500 italic mt-3 pt-1 border-t border-slate-200">
+          This is a Computer Generated Document
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <script>
+    let lineItems = [];
+    const DEFAULT_EMPTY_ROWS = 4;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      const saved = localStorage.getItem('proforma_draft');
+      const autoSave = localStorage.getItem('proforma_autosave') === 'true';
+      document.getElementById('chkAutoSave').checked = autoSave;
+
+      if (autoSave && saved) {
+        try { applyData(JSON.parse(saved)); } catch(e) { clearAllData(); }
+      } else {
+        clearAllData();
+      }
+    });
+
+    function toggleReceivedField() {
+      const isEnabled = document.getElementById('chkEnableReceived').checked;
+      const container = document.getElementById('receivedContainer');
+      if (isEnabled) {
+        container.classList.remove('hidden');
+      } else {
+        container.classList.add('hidden');
+        document.getElementById('receivedPayment').value = 0;
+      }
+      updateInvoice();
+    }
+
+    function addLineItem(desc='', hsn='', qty=1, rate=0, discount=0, discType='PERCENT') {
+      lineItems.push({ desc, hsn, qty, rate, discount, discType });
+      renderInputItems();
+      updateInvoice();
+    }
+
+    function removeLineItem(i) {
+      lineItems.splice(i, 1);
+      renderInputItems();
+      updateInvoice();
+    }
+
+    function renderInputItems() {
+      const c = document.getElementById('itemsContainer');
+      c.innerHTML = '';
+      if (lineItems.length === 0) {
+        c.innerHTML = `<p class="text-xs text-slate-400 italic text-center py-2">No items added yet. Click "+ Add Item" above.</p>`;
+        return;
+      }
+      lineItems.forEach((item, i) => {
+        const div = document.createElement('div');
+        div.className = 'p-2 bg-slate-50 border rounded text-xs space-y-1 relative';
+        div.innerHTML = `
+          <button onclick="removeLineItem(${i})" class="absolute top-1 right-1 text-red-500 hover:text-red-700 font-bold px-1 text-sm">×</button>
+          <div>
+            <label class="block font-semibold text-slate-600">Description ${i+1}</label>
+            <textarea rows="2" oninput="updateItem(${i}, 'desc', this.value)" class="w-full border rounded p-1 font-mono text-xs">${item.desc}</textarea>
+          </div>
+          <div class="grid grid-cols-5 gap-1">
+            <input type="text" placeholder="HSN" value="${item.hsn}" oninput="updateItem(${i}, 'hsn', this.value)" class="border rounded p-1 col-span-1">
+            <input type="number" placeholder="Qty" value="${item.qty}" oninput="updateItem(${i}, 'qty', this.value)" class="border rounded p-1 col-span-1">
+            <input type="number" placeholder="Rate" value="${item.rate}" oninput="updateItem(${i}, 'rate', this.value)" class="border rounded p-1 col-span-1">
+            <input type="number" placeholder="Disc" value="${item.discount}" oninput="updateItem(${i}, 'discount', this.value)" class="border rounded p-1 col-span-1">
+            <select onchange="updateItem(${i}, 'discType', this.value)" class="border rounded p-1 bg-white text-xs col-span-1">
+              <option value="PERCENT" ${item.discType === 'PERCENT' ? 'selected' : ''}>%</option>
+              <option value="FLAT" ${item.discType === 'FLAT' ? 'selected' : ''}>₹</option>
+            </select>
+          </div>
+        `;
+        c.appendChild(div);
+      });
+    }
+
+    function updateItem(i, f, v) {
+      if (f === 'desc' || f === 'hsn' || f === 'discType') {
+        lineItems[i][f] = v;
+      } else {
+        lineItems[i][f] = parseFloat(v) || 0;
+      }
+      updateInvoice();
+    }
+
+    function numberToWords(num) {
+      if (isNaN(num) || num <= 0) return 'Zero Only';
+      
+      const single = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+      const double = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+      const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+
+      function convertChunk(n) {
+        let str = '';
+        if (n >= 100) {
+          str += single[Math.floor(n / 100)] + ' Hundred ';
+          n %= 100;
+        }
+        if (n >= 10 && n < 20) {
+          str += double[n - 10] + ' ';
+        } else if (n >= 20) {
+          str += tens[Math.floor(n / 10)] + ' ';
+          if (n % 10 > 0) str += single[n % 10] + ' ';
+        } else if (n > 0) {
+          str += single[n] + ' ';
+        }
+        return str;
+      }
+
+      let integerPart = Math.floor(num);
+      let decimalPart = Math.round((num - integerPart) * 100);
+      let words = '';
+
+      if (integerPart >= 10000000) {
+        words += convertChunk(Math.floor(integerPart / 10000000)) + 'Crore ';
+        integerPart %= 10000000;
+      }
+      if (integerPart >= 100000) {
+        words += convertChunk(Math.floor(integerPart / 100000)) + 'Lakh ';
+        integerPart %= 100000;
+      }
+      if (integerPart >= 1000) {
+        words += convertChunk(Math.floor(integerPart / 1000)) + 'Thousand ';
+        integerPart %= 1000;
+      }
+      if (integerPart > 0) {
+        words += convertChunk(integerPart);
+      }
+
+      let res = words.trim() + ' Rupees';
+      if (decimalPart > 0) {
+        res += ' and ' + convertChunk(decimalPart).trim() + ' Paise';
+      }
+      return res + ' Only';
+    }
+
+    function updateInvoice() {
+      const seller = document.getElementById('sellerName').value || 'Fluid Power Hydraulics';
+      const buyerRaw = document.getElementById('buyerInfo').value || '';
+      const buyerInfo = buyerRaw.split('\n');
+      
+      document.getElementById('viewBuyerName').innerText = buyerInfo[0] || '';
+      document.getElementById('viewBuyerAddress').innerText = buyerInfo.slice(1).join('\n');
+      document.getElementById('viewBuyerGST').innerText = document.getElementById('buyerGST').value ? `GST -: ${document.getElementById('buyerGST').value}` : '';
+
+      document.getElementById('viewPivNo').innerText = document.getElementById('pivNo').value;
+      document.getElementById('viewPivDate').innerText = document.getElementById('pivDate').value;
+      document.getElementById('viewOrderNo').innerText = document.getElementById('orderNo').value;
+      document.getElementById('viewOrderDate').innerText = document.getElementById('orderDate').value;
+
+      document.getElementById('viewBankName').innerText = document.getElementById('bankName').value;
+      document.getElementById('viewBankBranch').innerText = document.getElementById('bankBranch').value;
+      document.getElementById('viewBankAcc').innerText = document.getElementById('bankAcc').value;
+      document.getElementById('viewBankIFSC').innerText = document.getElementById('bankIFSC').value;
+      document.getElementById('viewSellerSignature').innerText = seller;
+
+      const body = document.getElementById('viewItemsBody');
+      body.innerHTML = '';
+      let itemsTotal = 0;
+      const gstRate = parseFloat(document.getElementById('gstRate').value) || 0;
+
+      if (lineItems.length === 0) {
+        for (let r = 0; r < DEFAULT_EMPTY_ROWS; r++) {
+          body.innerHTML += `
+            <tr class="border-b border-black h-8">
+              <td class="p-1 border-r border-black"></td>
+              <td class="p-1 border-r border-black"></td>
+              <td class="p-1 border-r border-black"></td>
+              <td class="p-1 border-r border-black"></td>
+              <td class="p-1 border-r border-black"></td>
+              <td class="p-1 border-r border-black"></td>
+              <td class="p-1 border-r border-black"></td>
+              <td class="p-1"></td>
+            </tr>
+          `;
+        }
+      } else {
+        lineItems.forEach((item, idx) => {
+          const gross = (parseFloat(item.qty) || 0) * (parseFloat(item.rate) || 0);
+          let discVal = 0;
+          if (item.discType === 'PERCENT') {
+            discVal = gross * ((parseFloat(item.discount) || 0) / 100);
+          } else {
+            discVal = parseFloat(item.discount) || 0;
+          }
+          const amt = Math.max(0, gross - discVal);
+          itemsTotal += amt;
+
+          const discLabel = item.discount ? (item.discType === 'PERCENT' ? `${item.discount}%` : `₹${item.discount}`) : '0%';
+
+          body.innerHTML += `
+            <tr class="border-b border-black align-top">
+              <td class="p-1.5 border-r border-black">${idx+1}</td>
+              <td class="p-1.5 border-r border-black text-left whitespace-pre-line font-medium">${item.desc}</td>
+              <td class="p-1.5 border-r border-black">${item.hsn}</td>
+              <td class="p-1.5 border-r border-black">${gstRate}%</td>
+              <td class="p-1.5 border-r border-black">${item.qty}</td>
+              <td class="p-1.5 border-r border-black">${item.rate ? item.rate.toFixed(2) : '0.00'}</td>
+              <td class="p-1.5 border-r border-black">${discLabel}</td>
+              <td class="p-1.5 text-right font-semibold pr-2">${amt ? amt.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2}) : '0.00'}</td>
+            </tr>
+          `;
+        });
+      }
+
+      const freight = parseFloat(document.getElementById('freightCharges').value) || 0;
+      const taxable = itemsTotal + freight;
+      const taxType = document.getElementById('taxType').value;
+
+      let tax = 0;
+      if (taxType === 'INTRA') {
+        const half = gstRate / 2;
+        tax = taxable * (gstRate / 100);
+        document.getElementById('rowCGST').classList.remove('hidden');
+        document.getElementById('rowSGST').classList.remove('hidden');
+        document.getElementById('rowIGST').classList.add('hidden');
+        document.getElementById('viewCGSTRate').innerText = half;
+        document.getElementById('viewSGSTRate').innerText = half;
+        document.getElementById('viewCGSTVal').innerText = (tax/2).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        document.getElementById('viewSGSTVal').innerText = (tax/2).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+      } else {
+        tax = taxable * (gstRate / 100);
+        document.getElementById('rowCGST').classList.add('hidden');
+        document.getElementById('rowSGST').classList.add('hidden');
+        document.getElementById('rowIGST').classList.remove('hidden');
+        document.getElementById('viewIGSTRate').innerText = gstRate;
+        document.getElementById('viewIGSTVal').innerText = tax.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+      }
+
+      const exactTotal = taxable + tax;
+      const isRoundOff = document.getElementById('chkRoundOff').checked;
+      const rowRoundOff = document.getElementById('rowRoundOff');
+
+      let grand = exactTotal;
+      let roundOff = 0;
+
+      if (isRoundOff) {
+        grand = Math.round(exactTotal);
+        roundOff = grand - exactTotal;
+        rowRoundOff.classList.remove('hidden');
+        document.getElementById('viewRoundOffVal').innerText = roundOff.toFixed(2);
+      } else {
+        rowRoundOff.classList.add('hidden');
+      }
+
+      document.getElementById('viewFreightVal').innerText = freight.toFixed(2);
+      document.getElementById('viewTaxableVal').innerText = taxable.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+      document.getElementById('viewGrandTotalVal').innerText = grand.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+
+      const isReceivedEnabled = document.getElementById('chkEnableReceived').checked;
+      const rowReceived = document.getElementById('rowReceived');
+      const rowBalance = document.getElementById('rowBalance');
+
+      if (isReceivedEnabled) {
+        const received = parseFloat(document.getElementById('receivedPayment').value) || 0;
+        const balance = Math.max(0, grand - received);
+
+        rowReceived.classList.remove('hidden');
+        rowBalance.classList.remove('hidden');
+
+        document.getElementById('viewReceivedVal').innerText = received.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        document.getElementById('viewBalanceVal').innerText = balance.toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+        document.getElementById('viewAmountInWords').innerText = numberToWords(balance);
+      } else {
+        rowReceived.classList.add('hidden');
+        rowBalance.classList.add('hidden');
+        document.getElementById('viewAmountInWords').innerText = numberToWords(grand);
+      }
+
+      const isAutoSave = document.getElementById('chkAutoSave').checked;
+      const draftBadge = document.getElementById('draftBadge');
+      if (isAutoSave) {
+        localStorage.setItem('proforma_draft', JSON.stringify(collectFormData()));
+        draftBadge.classList.remove('hidden');
+      } else {
+        draftBadge.classList.add('hidden');
+      }
+    }
+
+    function collectFormData() {
+      return {
+        sellerName: document.getElementById('sellerName').value,
+        buyerInfo: document.getElementById('buyerInfo').value,
+        buyerGST: document.getElementById('buyerGST').value,
+        pivNo: document.getElementById('pivNo').value,
+        pivDate: document.getElementById('pivDate').value,
+        orderNo: document.getElementById('orderNo').value,
+        orderDate: document.getElementById('orderDate').value,
+        taxType: document.getElementById('taxType').value,
+        gstRate: document.getElementById('gstRate').value,
+        freightCharges: document.getElementById('freightCharges').value,
+        roundOff: document.getElementById('chkRoundOff').checked,
+        enableReceived: document.getElementById('chkEnableReceived').checked,
+        receivedPayment: document.getElementById('receivedPayment').value,
+        bankName: document.getElementById('bankName').value,
+        bankBranch: document.getElementById('bankBranch').value,
+        bankAcc: document.getElementById('bankAcc').value,
+        bankIFSC: document.getElementById('bankIFSC').value,
+        items: lineItems
+      };
+    }
+
+    function applyData(data) {
+      document.getElementById('sellerName').value = data.sellerName || '';
+      document.getElementById('buyerInfo').value = data.buyerInfo || '';
+      document.getElementById('buyerGST').value = data.buyerGST || '';
+      document.getElementById('pivNo').value = data.pivNo || '';
+      document.getElementById('pivDate').value = data.pivDate || '';
+      document.getElementById('orderNo').value = data.orderNo || '';
+      document.getElementById('orderDate').value = data.orderDate || '';
+      document.getElementById('taxType').value = data.taxType || 'INTRA';
+      document.getElementById('gstRate').value = data.gstRate || 18;
+      document.getElementById('freightCharges').value = data.freightCharges || 0;
+      
+      document.getElementById('chkRoundOff').checked = (data.roundOff !== undefined ? data.roundOff : true);
+
+      const enableReceived = data.enableReceived === true || (data.receivedPayment && parseFloat(data.receivedPayment) > 0);
+      document.getElementById('chkEnableReceived').checked = enableReceived;
+      document.getElementById('receivedPayment').value = data.receivedPayment || 0;
+      if (enableReceived) {
+        document.getElementById('receivedContainer').classList.remove('hidden');
+      } else {
+        document.getElementById('receivedContainer').classList.add('hidden');
+      }
+
+      document.getElementById('bankName').value = data.bankName || '';
+      document.getElementById('bankBranch').value = data.bankBranch || '';
+      document.getElementById('bankAcc').value = data.bankAcc || '';
+      document.getElementById('bankIFSC').value = data.bankIFSC || '';
+      lineItems = data.items || [];
+      renderInputItems();
+      updateInvoice();
+    }
+
+    function clearAllData() {
+      applyData({
+        sellerName: '', buyerInfo: '', buyerGST: '', pivNo: '', pivDate: '', orderNo: '', orderDate: '',
+        taxType: 'INTRA', gstRate: 18, freightCharges: 0, roundOff: true, enableReceived: false, receivedPayment: 0,
+        bankName: '', bankBranch: '', bankAcc: '', bankIFSC: '', items: []
+      });
+      localStorage.removeItem('proforma_draft');
+    }
+
+    function toggleAutoSave() {
+      const chk = document.getElementById('chkAutoSave').checked;
+      localStorage.setItem('proforma_autosave', chk);
+      updateInvoice();
+    }
+
+    function loadSampleData() {
+      applyData({
+        sellerName: 'Fluid Power Hydraulics',
+        buyerInfo: 'M/s ARKKAYS BRIGHT STEEL PVT.LTD.\nFactory: B-73, Sipcot Industrial Park,\nIrungattukottai, Sriperumpudur,\nKancheepuram - 602117',
+        buyerGST: '33ABECA6961A1Z1',
+        pivNo: 'FPH-PIV-070-2026',
+        pivDate: '23-09-2026',
+        orderNo: '5510000151',
+        orderDate: '09-05-2026',
+        taxType: 'INTRA',
+        gstRate: 18,
+        freightCharges: 0,
+        roundOff: true,
+        enableReceived: false,
+        receivedPayment: 0,
+        bankName: 'HDFC BANK LTD',
+        bankBranch: 'VADAPALANI',
+        bankAcc: '07952320000398',
+        bankIFSC: 'HDFC0001297',
+        items: [{ desc: 'BEND AXIAL PUMP\nMODEL: A2FM12/61W-VPP040\nMAKE: REXROTH', hsn: '8413', qty: 76, rate: 5000, discount: 10, discType: 'PERCENT' }]
+      });
+    }
+
+    function exportToWord() {
+      const clone = document.querySelector('.print-area').cloneNode(true);
+      
+      const tables = clone.querySelectorAll('table');
+      tables.forEach(t => {
+        t.setAttribute('border', '1');
+        t.setAttribute('cellspacing', '0');
+        t.setAttribute('cellpadding', '6');
+        t.style.borderCollapse = 'collapse';
+        t.style.width = '100%';
+        t.style.border = '1px solid black';
+      });
+
+      const tds = clone.querySelectorAll('td, th');
+      tds.forEach(td => {
+        td.style.border = '1px solid black';
+        td.style.padding = '6px';
+      });
+
+      const htmlHeader = `
+        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+        <head>
+          <meta charset='utf-8'>
+          <title>Proforma Invoice</title>
+          <style>
+            body { font-family: Arial, sans-serif; font-size: 10pt; }
+            table { border-collapse: collapse; width: 100%; margin-bottom: 0px; }
+            td, th { border: 1px solid #000000; padding: 5px; vertical-align: top; }
+            .font-bold { font-weight: bold; }
+            .text-right { text-align: right; }
+            .text-center { text-align: center; }
+          </style>
+        </head>
+        <body>
+      `;
+      const htmlFooter = `</body></html>`;
+      
+      const content = htmlHeader + clone.innerHTML + htmlFooter;
+      const blob = new Blob(['\ufeff' + content], { type: 'application/msword' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `Proforma_Invoice_${document.getElementById('pivNo').value || 'Draft'}.doc`;
+      a.click();
+    }
+  </script>
+</body>
+</html>
